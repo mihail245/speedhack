@@ -1,323 +1,182 @@
--- Основные переменные
-local isMenuOpen = false
-local animationProgress = 0
-local targetAnimationProgress = 0
-local currentSpeed = 1.0
-local defaultSpeed = 1.0
+-- SpeedHack UI с анимациями
+local speedhack = {
+    enabled = false,
+    speed = 1.0,
+    menuOpen = false,
+    animationProgress = 0,
+    targetAnimationProgress = 0
+}
 
--- Цветовая схема
+-- Цвета темной темы
 local colors = {
-    background = Color(20, 20, 25, 240),
-    surface = Color(35, 35, 40, 255),
-    primary = Color(50, 50, 55, 255),
-    accent = Color(65, 65, 75, 255),
-    text = Color(220, 220, 220, 255),
-    hint = Color(150, 150, 150, 255),
-    success = Color(80, 200, 120, 255),
-    error = Color(200, 80, 80, 255)
+    background = {0.12, 0.12, 0.12, 0.95},
+    primary = {0.26, 0.26, 0.28, 1.0},
+    accent = {0.05, 0.55, 0.85, 1.0},
+    text = {0.95, 0.95, 0.95, 1.0},
+    border = {0.35, 0.35, 0.35, 1.0},
+    hover = {0.35, 0.35, 0.35, 0.3}
 }
 
--- Иконка меню (символ вместо спрайта)
-local menuIcon = {
-    position = Vector2(30, 30),
-    size = Vector2(60, 60),
-    color = colors.accent,
-    hoverColor = Color(85, 85, 95, 255),
-    isHovered = false
+-- Размеры и позиции
+local sizes = {
+    icon = 40,
+    menuWidth = 250,
+    menuHeight = 180,
+    padding = 15,
+    buttonHeight = 35,
+    sliderHeight = 20
 }
 
--- Основное меню
-local mainMenu = {
-    visible = false,
-    position = Vector2(80, 80),
-    size = Vector2(280, 380),
-    cornerRadius = 20
+local positions = {
+    icon = {x = 50, y = 50},
+    menu = {x = 50, y = 100}
 }
 
--- Элементы меню
-local speedInput = {
-    text = "1.0",
-    position = Vector2(100, 180),
-    size = Vector2(240, 50),
-    active = false,
-    placeholder = "Введите скорость"
-}
-
-local setSpeedButton = {
-    text = "УСТАНОВИТЬ СКОРОСТЬ",
-    position = Vector2(100, 250),
-    size = Vector2(240, 55),
-    isHovered = false
-}
-
-local resetSpeedButton = {
-    text = "ОБЫЧНАЯ СКОРОСТЬ",
-    position = Vector2(100, 320),
-    size = Vector2(240, 55),
-    isHovered = false
-}
-
-local closeButton = {
-    text = "✕",
-    position = Vector2(330, 90),
-    size = Vector2(40, 40),
-    isHovered = false
-}
-
--- Функция для проверки касания
-function isTouchInRect(touchPos, rectPos, rectSize)
-    return touchPos.x >= rectPos.x and touchPos.x <= rectPos.x + rectSize.x and
-           touchPos.y >= rectPos.y and touchPos.y <= rectPos.y + rectSize.y
-end
-
--- Функция для плавной анимации
-function lerp(a, b, t)
-    return a + (b - a) * math.min(math.max(t, 0), 1)
-end
-
--- Функция установки скорости
-function setPlayerSpeed(speed)
-    local player = getLocalPlayer()
-    if player then
-        player.speed = speed
-        currentSpeed = speed
+-- Анимация
+local function animate(dt)
+    if speedhack.animationProgress < speedhack.targetAnimationProgress then
+        speedhack.animationProgress = math.min(speedhack.animationProgress + dt * 8, speedhack.targetAnimationProgress)
+    elseif speedhack.animationProgress > speedhack.targetAnimationProgress then
+        speedhack.animationProgress = math.max(speedhack.animationProgress - dt * 8, speedhack.targetAnimationProgress)
     end
 end
 
--- Функция рисования закругленного прямоугольника
-function drawRoundedRect(position, size, radius, color)
-    -- Простая реализация прямоугольника с закругленными углами
-    drawRect(position, size, color, radius)
+-- Отрисовка закругленного прямоугольника
+local function drawRoundedRect(x, y, w, h, radius, color)
+    local r, g, b, a = table.unpack(color)
+    imgui.DrawList_AddRectFilledRound(x, y, x + w, y + h, radius, 12, imgui.GetColorU32(r, g, b, a))
 end
 
--- Функция рисования иконки
-function drawMenuIcon()
-    local iconColor = menuIcon.isHovered and menuIcon.hoverColor or menuIcon.color
-    local alpha = 255 * animationProgress
+-- Отрисовка иконки
+local function drawIcon()
+    local iconX, iconY = positions.icon.x, positions.icon.y
+    local iconSize = sizes.icon
     
     -- Фон иконки
-    drawRoundedRect(menuIcon.position, menuIcon.size, 15, Color(iconColor.r, iconColor.g, iconColor.b, alpha))
+    drawRoundedRect(iconX, iconY, iconSize, iconSize, 8, colors.primary)
     
-    -- Символ скорости (три линии)
-    local center = Vector2(menuIcon.position.x + menuIcon.size.x/2, menuIcon.position.y + menuIcon.size.y/2)
-    local iconAlpha = isMenuOpen and alpha or 255
+    -- Анимация иконки
+    local rotation = speedhack.animationProgress * 90
+    local scale = 0.8 + math.sin(speedhack.animationProgress * math.pi) * 0.2
     
-    -- Горизонтальные линии
-    drawLine(
-        Vector2(center.x - 15, center.y - 8),
-        Vector2(center.x + 15, center.y - 8),
-        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
-        3
-    )
-    drawLine(
-        Vector2(center.x - 12, center.y),
-        Vector2(center.x + 12, center.y),
-        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
-        3
-    )
-    drawLine(
-        Vector2(center.x - 9, center.y + 8),
-        Vector2(center.x + 9, center.y + 8),
-        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
-        3
-    )
-end
-
--- Основная функция обновления
-function update()
-    -- Обновление анимации
-    animationProgress = lerp(animationProgress, targetAnimationProgress, 0.15)
-    
-    -- Сброс состояний наведения
-    menuIcon.isHovered = false
-    setSpeedButton.isHovered = false
-    resetSpeedButton.isHovered = false
-    closeButton.isHovered = false
-    
-    -- Обработка касаний
-    local touches = getTouches()
-    for _, touch in ipairs(touches) do
-        if touch.phase == "BEGAN" then
-            -- Проверка касания иконки меню
-            if isTouchInRect(touch.position, menuIcon.position, menuIcon.size) then
-                isMenuOpen = not isMenuOpen
-                targetAnimationProgress = isMenuOpen and 1 or 0
-                playSound("click.wav")
-            end
-            
-            -- Если меню открыто, проверяем элементы
-            if isMenuOpen then
-                -- Кнопка закрытия
-                if isTouchInRect(touch.position, closeButton.position, closeButton.size) then
-                    isMenuOpen = false
-                    targetAnimationProgress = 0
-                    playSound("close.wav")
-                end
-                
-                -- Поле ввода
-                if isTouchInRect(touch.position, speedInput.position, speedInput.size) then
-                    speedInput.active = true
-                    showKeyboard()
-                else
-                    speedInput.active = false
-                end
-                
-                -- Кнопка установки скорости
-                if isTouchInRect(touch.position, setSpeedButton.position, setSpeedButton.size) then
-                    local speed = tonumber(speedInput.text)
-                    if speed and speed > 0 and speed <= 10 then
-                        setPlayerSpeed(speed)
-                        playSound("confirm.wav")
-                    else
-                        playSound("error.wav")
-                    end
-                end
-                
-                -- Кнопка сброса скорости
-                if isTouchInRect(touch.position, resetSpeedButton.position, resetSpeedButton.size) then
-                    setPlayerSpeed(defaultSpeed)
-                    speedInput.text = tostring(defaultSpeed)
-                    playSound("reset.wav")
-                end
-            end
-        end
+    if speedhack.menuOpen then
+        -- Крестик
+        local centerX, centerY = iconX + iconSize/2, iconY + iconSize/2
+        local lineSize = iconSize * 0.35 * scale
         
-        -- Проверка наведения для анимаций
-        if touch.phase == "MOVED" then
-            if isTouchInRect(touch.position, menuIcon.position, menuIcon.size) then
-                menuIcon.isHovered = true
-            end
-            
-            if isMenuOpen then
-                if isTouchInRect(touch.position, setSpeedButton.position, setSpeedButton.size) then
-                    setSpeedButton.isHovered = true
-                end
-                if isTouchInRect(touch.position, resetSpeedButton.position, resetSpeedButton.size) then
-                    resetSpeedButton.isHovered = true
-                end
-                if isTouchInRect(touch.position, closeButton.position, closeButton.size) then
-                    closeButton.isHovered = true
-                end
-            end
-        end
-    end
-    
-    -- Обновление видимости меню
-    if isMenuOpen then
-        mainMenu.visible = true
+        imgui.DrawList_AddLine(
+            centerX - lineSize, centerY - lineSize,
+            centerX + lineSize, centerY + lineSize,
+            imgui.GetColorU32(1, 1, 1, 1), 3
+        )
+        imgui.DrawList_AddLine(
+            centerX + lineSize, centerY - lineSize,
+            centerX - lineSize, centerY + lineSize,
+            imgui.GetColorU32(1, 1, 1, 1), 3
+        )
     else
-        if animationProgress < 0.1 then
-            mainMenu.visible = false
-        end
+        -- Машинка с анимацией
+        local carX, carY = iconX + iconSize/2, iconY + iconSize/2
+        local carSize = iconSize * 0.5 * scale
+        
+        -- Кузов машинки
+        drawRoundedRect(carX - carSize*0.8, carY - carSize*0.3, carSize*1.6, carSize*0.8, 5, {0.8, 0.2, 0.2, 1.0})
+        
+        -- Окна
+        drawRoundedRect(carX - carSize*0.6, carY - carSize*0.25, carSize*1.2, carSize*0.4, 3, {0.6, 0.8, 1.0, 0.7})
+        
+        -- Колеса
+        drawRoundedRect(carX - carSize*0.7, carY + carSize*0.3, carSize*0.3, carSize*0.3, carSize*0.15, {0.1, 0.1, 0.1, 1.0})
+        drawRoundedRect(carX + carSize*0.4, carY + carSize*0.3, carSize*0.3, carSize*0.3, carSize*0.15, {0.1, 0.1, 0.1, 1.0})
     end
 end
 
--- Функция отрисовки
-function render()
-    -- Рисуем иконку меню (всегда видима)
-    drawMenuIcon()
-    
-    -- Если меню видимо, рисуем его с анимацией
-    if mainMenu.visible then
-        local scale = animationProgress
-        local alpha = 255 * animationProgress
+-- Отрисовка меню
+local function drawMenu()
+    if speedhack.menuOpen or speedhack.animationProgress > 0 then
+        local menuAlpha = speedhack.animationProgress
+        local menuX, menuY = positions.menu.x, positions.menu.y
         
-        -- Фон меню с тенью
-        drawRoundedRect(
-            Vector2(mainMenu.position.x - 2, mainMenu.position.y - 2),
-            Vector2(mainMenu.size.x + 4, mainMenu.size.y + 4),
-            mainMenu.cornerRadius,
-            Color(0, 0, 0, alpha * 0.3)
-        )
+        -- Фон меню с анимацией
+        local currentColors = {
+            background = {colors.background[1], colors.background[2], colors.background[3], colors.background[4] * menuAlpha},
+            text = {colors.text[1], colors.text[2], colors.text[3], colors.text[4] * menuAlpha}
+        }
         
-        drawRoundedRect(
-            mainMenu.position, 
-            mainMenu.size, 
-            mainMenu.cornerRadius, 
-            Color(colors.background.r, colors.background.g, colors.background.b, alpha)
-        )
+        drawRoundedRect(menuX, menuY, sizes.menuWidth, sizes.menuHeight, 12, currentColors.background)
         
         -- Заголовок
-        drawText("УПРАВЛЕНИЕ СКОРОСТЬЮ", 
-                Vector2(mainMenu.position.x + mainMenu.size.x/2, mainMenu.position.y + 40), 
-                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
-                20, "center", "bold")
+        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding)
+        imgui.TextColored(table.unpack(currentColors.text), "🚗 SpeedHack")
         
-        -- Поле ввода
-        local inputColor = speedInput.active and colors.primary or colors.surface
-        drawRoundedRect(speedInput.position, speedInput.size, 12, 
-                       Color(inputColor.r, inputColor.g, inputColor.b, alpha))
+        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding * 3)
         
-        -- Текст в поле ввода
-        if speedInput.text ~= "" then
-            drawText(speedInput.text, 
-                    Vector2(speedInput.position.x + 15, speedInput.position.y + 15), 
-                    Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
-                    18)
-        else
-            drawText(speedInput.placeholder, 
-                    Vector2(speedInput.position.x + 15, speedInput.position.y + 15), 
-                    Color(colors.hint.r, colors.hint.g, colors.hint.b, alpha), 
-                    18)
+        -- Слайдер скорости
+        imgui.TextColored(table.unpack(currentColors.text), "Скорость: %.1fx", speedhack.speed)
+        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding * 5)
+        
+        if imgui.SliderFloat("##speed", speedhack.speed, 0.1, 10.0, "%.1f", sizes.menuWidth - sizes.padding * 2) then
+            if speedhack.enabled then
+                setGameSpeed(speedhack.speed)
+            end
         end
         
-        -- Кнопка установки скорости
-        local setButtonColor = setSpeedButton.isHovered and colors.accent or colors.primary
-        drawRoundedRect(setSpeedButton.position, setSpeedButton.size, 12, 
-                       Color(setButtonColor.r, setButtonColor.g, setButtonColor.b, alpha))
-        drawText(setSpeedButton.text, 
-                Vector2(setSpeedButton.position.x + setSpeedButton.size.x/2, setSpeedButton.position.y + setSpeedButton.size.y/2 - 10), 
-                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
-                16, "center", "bold")
+        -- Кнопка включения/выключения
+        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.menuHeight - sizes.buttonHeight - sizes.padding)
         
-        -- Кнопка сброса скорости
-        local resetButtonColor = resetSpeedButton.isHovered and colors.accent or colors.primary
-        drawRoundedRect(resetSpeedButton.position, resetSpeedButton.size, 12, 
-                       Color(resetButtonColor.r, resetButtonColor.g, resetButtonColor.b, alpha))
-        drawText(resetSpeedButton.text, 
-                Vector2(resetSpeedButton.position.x + resetSpeedButton.size.x/2, resetSpeedButton.position.y + resetSpeedButton.size.y/2 - 10), 
-                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
-                16, "center", "bold")
+        local buttonColor = speedhack.enabled and {0.8, 0.2, 0.2, 0.8} or {0.2, 0.8, 0.2, 0.8}
+        local buttonText = speedhack.enabled and "Выключить" or "Включить"
         
-        -- Кнопка закрытия
-        local closeButtonColor = closeButton.isHovered and Color(220, 90, 90, alpha) or Color(200, 70, 70, alpha)
-        drawRoundedRect(closeButton.position, closeButton.size, 20, closeButtonColor)
-        drawText(closeButton.text, 
-                Vector2(closeButton.position.x + closeButton.size.x/2, closeButton.position.y + closeButton.size.y/2 - 12), 
-                Color(255, 255, 255, alpha), 
-                20, "center", "bold")
-        
-        -- Текущая скорость
-        drawText("Текущая скорость: " .. currentSpeed .. "x", 
-                Vector2(mainMenu.position.x + mainMenu.size.x/2, mainMenu.position.y + mainMenu.size.y - 30), 
-                Color(colors.hint.r, colors.hint.g, colors.hint.b, alpha), 
-                14, "center")
-    end
-end
-
--- Обработка ввода с клавиатуры
-function onTextInput(text)
-    if speedInput.active then
-        if text == "\b" then
-            -- Backspace
-            speedInput.text = speedInput.text:sub(1, -2)
-        elseif text:match("[%d%.]") and #speedInput.text < 6 then
-            -- Только цифры и точка, максимум 6 символов
-            if not (text == "." and speedInput.text:find("%.")) then -- Проверка на дублирование точки
-                speedInput.text = speedInput.text .. text
+        if imgui.Button(buttonText, sizes.menuWidth - sizes.padding * 2, sizes.buttonHeight) then
+            speedhack.enabled = not speedhack.enabled
+            if speedhack.enabled then
+                setGameSpeed(speedhack.speed)
+            else
+                setGameSpeed(1.0)
             end
         end
     end
+end
+
+-- Основная функция рендеринга
+function onRender()
+    animate(imgui.GetIO().DeltaTime)
+    
+    -- Проверка клика по иконке
+    local mousePos = imgui.GetMousePos()
+    local iconRect = {
+        x = positions.icon.x,
+        y = positions.icon.y,
+        w = sizes.icon,
+        h = sizes.icon
+    }
+    
+    local isHovering = mousePos.x >= iconRect.x and mousePos.x <= iconRect.x + iconRect.w and
+                      mousePos.y >= iconRect.y and mousePos.y <= iconRect.y + iconRect.h
+    
+    -- Подсветка при наведении
+    if isHovering then
+        drawRoundedRect(iconRect.x - 2, iconRect.y - 2, iconRect.w + 4, iconRect.h + 4, 10, colors.hover)
+    end
+    
+    -- Отрисовка иконки
+    drawIcon()
+    
+    -- Отрисовка меню
+    drawMenu()
+    
+    -- Обработка клика
+    if imgui.IsMouseClicked(0) and isHovering then
+        speedhack.menuOpen = not speedhack.menuOpen
+        speedhack.targetAnimationProgress = speedhack.menuOpen and 1.0 or 0.0
+    end
+end
+
+-- Функция установки скорости игры (замените на вашу реализацию)
+function setGameSpeed(speed)
+    -- Ваша реализация изменения скорости игры здесь
+    print("Установлена скорость: " .. tostring(speed) .. "x")
 end
 
 -- Инициализация
-function init()
-    print("🚀 Скрипт управления скоростью загружен!")
-    print("👉 Нажмите на иконку в левом верхнем углу для открытия меню")
-end
-
--- Очистка
-function cleanup()
-    setPlayerSpeed(defaultSpeed)
-    print("📴 Скрипт управления скоростью выгружен")
-end
+print("🚗 SpeedHack загружен! Нажмите на иконку машинки чтобы открыть меню.")

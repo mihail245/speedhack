@@ -1,10 +1,12 @@
--- SpeedHack UI с анимациями
+-- SpeedHack Mobile UI
 local speedhack = {
     enabled = false,
     speed = 1.0,
     menuOpen = false,
     animationProgress = 0,
-    targetAnimationProgress = 0
+    dragStartPos = {x = 0, y = 0},
+    isDragging = false,
+    position = {x = 20, y = 50}
 }
 
 -- Цвета темной темы
@@ -14,30 +16,30 @@ local colors = {
     accent = {0.05, 0.55, 0.85, 1.0},
     text = {0.95, 0.95, 0.95, 1.0},
     border = {0.35, 0.35, 0.35, 1.0},
-    hover = {0.35, 0.35, 0.35, 0.3}
+    hover = {0.35, 0.35, 0.35, 0.3},
+    button = {0.2, 0.5, 0.8, 1.0},
+    buttonHover = {0.3, 0.6, 0.9, 1.0},
+    buttonActive = {0.15, 0.4, 0.7, 1.0}
 }
 
 -- Размеры и позиции
 local sizes = {
-    icon = 40,
-    menuWidth = 250,
+    headerHeight = 40,
+    menuWidth = 280,
     menuHeight = 180,
     padding = 15,
     buttonHeight = 35,
-    sliderHeight = 20
-}
-
-local positions = {
-    icon = {x = 50, y = 50},
-    menu = {x = 50, y = 100}
+    sliderHeight = 20,
+    handleSize = 40,
+    dragThreshold = 5
 }
 
 -- Анимация
 local function animate(dt)
-    if speedhack.animationProgress < speedhack.targetAnimationProgress then
-        speedhack.animationProgress = math.min(speedhack.animationProgress + dt * 8, speedhack.targetAnimationProgress)
-    elseif speedhack.animationProgress > speedhack.targetAnimationProgress then
-        speedhack.animationProgress = math.max(speedhack.animationProgress - dt * 8, speedhack.targetAnimationProgress)
+    if speedhack.animationProgress < (speedhack.menuOpen and 1 or 0) then
+        speedhack.animationProgress = math.min(speedhack.animationProgress + dt * 8, 1)
+    elseif speedhack.animationProgress > (speedhack.menuOpen and 1 or 0) then
+        speedhack.animationProgress = math.max(speedhack.animationProgress - dt * 8, 0)
     end
 end
 
@@ -47,55 +49,120 @@ local function drawRoundedRect(x, y, w, h, radius, color)
     imgui.DrawList_AddRectFilledRound(x, y, x + w, y + h, radius, 12, imgui.GetColorU32(r, g, b, a))
 end
 
--- Отрисовка иконки
-local function drawIcon()
-    local iconX, iconY = positions.icon.x, positions.icon.y
-    local iconSize = sizes.icon
+-- Отрисовка кнопки
+local function drawButton(x, y, w, h, text, isActive)
+    local mousePos = imgui.GetMousePos()
+    local isHovering = mousePos.x >= x and mousePos.x <= x + w and mousePos.y >= y and mousePos.y <= y + h
+    local isClicked = isHovering and imgui.IsMouseClicked(0)
     
-    -- Фон иконки
-    drawRoundedRect(iconX, iconY, iconSize, iconSize, 8, colors.primary)
+    local color = isActive and colors.buttonActive or (isHovering and colors.buttonHover or colors.button)
+    drawRoundedRect(x, y, w, h, 6, color)
     
-    -- Анимация иконки
-    local rotation = speedhack.animationProgress * 90
-    local scale = 0.8 + math.sin(speedhack.animationProgress * math.pi) * 0.2
+    -- Текст кнопки
+    local textWidth = imgui.CalcTextSize(text)
+    imgui.DrawList_AddText(x + (w - textWidth) / 2, y + (h - imgui.GetFontSize()) / 2, 
+                          imgui.GetColorU32(1, 1, 1, 1), text)
+    
+    return isClicked
+end
+
+-- Отрисовка заголовка с кнопкой закрытия
+local function drawHeader()
+    local headerX, headerY = speedhack.position.x, speedhack.position.y
+    local headerWidth = sizes.menuWidth
+    
+    -- Фон заголовка
+    drawRoundedRect(headerX, headerY, headerWidth, sizes.headerHeight, 8, colors.primary)
+    
+    -- Заголовок
+    local title = "🚗 SpeedHack"
+    local titleWidth = imgui.CalcTextSize(title)
+    imgui.DrawList_AddText(headerX + sizes.padding, headerY + (sizes.headerHeight - imgui.GetFontSize()) / 2, 
+                          imgui.GetColorU32(table.unpack(colors.text)), title)
+    
+    -- Кнопка закрытия/открытия
+    local buttonSize = sizes.headerHeight - 10
+    local buttonX = headerX + headerWidth - buttonSize - 5
+    local buttonY = headerY + 5
+    
+    local mousePos = imgui.GetMousePos()
+    local isHovering = mousePos.x >= buttonX and mousePos.x <= buttonX + buttonSize and 
+                      mousePos.y >= buttonY and mousePos.y <= buttonY + buttonSize
+    
+    -- Анимированный крестик/бургер
+    local centerX, centerY = buttonX + buttonSize/2, buttonY + buttonSize/2
+    local lineSize = buttonSize * 0.4
     
     if speedhack.menuOpen then
         -- Крестик
-        local centerX, centerY = iconX + iconSize/2, iconY + iconSize/2
-        local lineSize = iconSize * 0.35 * scale
-        
         imgui.DrawList_AddLine(
             centerX - lineSize, centerY - lineSize,
             centerX + lineSize, centerY + lineSize,
-            imgui.GetColorU32(1, 1, 1, 1), 3
+            imgui.GetColorU32(1, 1, 1, 1), 2
         )
         imgui.DrawList_AddLine(
             centerX + lineSize, centerY - lineSize,
             centerX - lineSize, centerY + lineSize,
-            imgui.GetColorU32(1, 1, 1, 1), 3
+            imgui.GetColorU32(1, 1, 1, 1), 2
         )
     else
-        -- Машинка с анимацией
-        local carX, carY = iconX + iconSize/2, iconY + iconSize/2
-        local carSize = iconSize * 0.5 * scale
+        -- Бургер меню
+        local lineY1 = centerY - lineSize/2
+        local lineY2 = centerY
+        local lineY3 = centerY + lineSize/2
         
-        -- Кузов машинки
-        drawRoundedRect(carX - carSize*0.8, carY - carSize*0.3, carSize*1.6, carSize*0.8, 5, {0.8, 0.2, 0.2, 1.0})
-        
-        -- Окна
-        drawRoundedRect(carX - carSize*0.6, carY - carSize*0.25, carSize*1.2, carSize*0.4, 3, {0.6, 0.8, 1.0, 0.7})
-        
-        -- Колеса
-        drawRoundedRect(carX - carSize*0.7, carY + carSize*0.3, carSize*0.3, carSize*0.3, carSize*0.15, {0.1, 0.1, 0.1, 1.0})
-        drawRoundedRect(carX + carSize*0.4, carY + carSize*0.3, carSize*0.3, carSize*0.3, carSize*0.15, {0.1, 0.1, 0.1, 1.0})
+        imgui.DrawList_AddLine(
+            centerX - lineSize, lineY1,
+            centerX + lineSize, lineY1,
+            imgui.GetColorU32(1, 1, 1, 1), 2
+        )
+        imgui.DrawList_AddLine(
+            centerX - lineSize, lineY2,
+            centerX + lineSize, lineY2,
+            imgui.GetColorU32(1, 1, 1, 1), 2
+        )
+        imgui.DrawList_AddLine(
+            centerX - lineSize, lineY3,
+            centerX + lineSize, lineY3,
+            imgui.GetColorU32(1, 1, 1, 1), 2
+        )
     end
+    
+    -- Обработка клика по кнопке
+    if isHovering and imgui.IsMouseClicked(0) then
+        speedhack.menuOpen = not speedhack.menuOpen
+        return true
+    end
+    
+    -- Проверка на начало перетаскивания
+    local isInHeader = mousePos.x >= headerX and mousePos.x <= headerX + headerWidth and 
+                      mousePos.y >= headerY and mousePos.y <= headerY + sizes.headerHeight
+    
+    if isInHeader and imgui.IsMouseClicked(0) then
+        speedhack.dragStartPos = {x = mousePos.x - speedhack.position.x, y = mousePos.y - speedhack.position.y}
+        speedhack.isDragging = true
+    end
+    
+    if imgui.IsMouseDown(0) and speedhack.isDragging then
+        speedhack.position.x = mousePos.x - speedhack.dragStartPos.x
+        speedhack.position.y = mousePos.y - speedhack.dragStartPos.y
+        
+        -- Ограничение позиции в пределах экрана
+        local screenWidth, screenHeight = getScreenSize()
+        speedhack.position.x = math.max(0, math.min(screenWidth - sizes.menuWidth, speedhack.position.x))
+        speedhack.position.y = math.max(0, math.min(screenHeight - sizes.menuHeight, speedhack.position.y))
+    else
+        speedhack.isDragging = false
+    end
+    
+    return false
 end
 
 -- Отрисовка меню
 local function drawMenu()
     if speedhack.menuOpen or speedhack.animationProgress > 0 then
         local menuAlpha = speedhack.animationProgress
-        local menuX, menuY = positions.menu.x, positions.menu.y
+        local menuX, menuY = speedhack.position.x, speedhack.position.y + sizes.headerHeight
         
         -- Фон меню с анимацией
         local currentColors = {
@@ -103,18 +170,16 @@ local function drawMenu()
             text = {colors.text[1], colors.text[2], colors.text[3], colors.text[4] * menuAlpha}
         }
         
-        drawRoundedRect(menuX, menuY, sizes.menuWidth, sizes.menuHeight, 12, currentColors.background)
+        drawRoundedRect(menuX, menuY, sizes.menuWidth, sizes.menuHeight, 8, currentColors.background)
         
-        -- Заголовок
-        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding)
-        imgui.TextColored(table.unpack(currentColors.text), "🚗 SpeedHack")
-        
-        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding * 3)
+        -- Содержимое меню
+        local contentY = menuY + sizes.padding
         
         -- Слайдер скорости
+        imgui.SetCursorPos(menuX + sizes.padding, contentY)
         imgui.TextColored(table.unpack(currentColors.text), "Скорость: %.1fx", speedhack.speed)
-        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.padding * 5)
         
+        imgui.SetCursorPos(menuX + sizes.padding, contentY + imgui.GetFontSize() + 5)
         if imgui.SliderFloat("##speed", speedhack.speed, 0.1, 10.0, "%.1f", sizes.menuWidth - sizes.padding * 2) then
             if speedhack.enabled then
                 setGameSpeed(speedhack.speed)
@@ -122,12 +187,10 @@ local function drawMenu()
         end
         
         -- Кнопка включения/выключения
-        imgui.SetCursorPos(menuX + sizes.padding, menuY + sizes.menuHeight - sizes.buttonHeight - sizes.padding)
+        local buttonY = contentY + imgui.GetFontSize() * 2 + sizes.sliderHeight + 15
+        local buttonText = speedhack.enabled and "ВЫКЛЮЧИТЬ" or "ВКЛЮЧИТЬ"
         
-        local buttonColor = speedhack.enabled and {0.8, 0.2, 0.2, 0.8} or {0.2, 0.8, 0.2, 0.8}
-        local buttonText = speedhack.enabled and "Выключить" or "Включить"
-        
-        if imgui.Button(buttonText, sizes.menuWidth - sizes.padding * 2, sizes.buttonHeight) then
+        if drawButton(menuX + sizes.padding, buttonY, sizes.menuWidth - sizes.padding * 2, sizes.buttonHeight, buttonText, speedhack.enabled) then
             speedhack.enabled = not speedhack.enabled
             if speedhack.enabled then
                 setGameSpeed(speedhack.speed)
@@ -135,6 +198,14 @@ local function drawMenu()
                 setGameSpeed(1.0)
             end
         end
+        
+        -- Информация о состоянии
+        local statusY = buttonY + sizes.buttonHeight + 10
+        local statusText = speedhack.enabled and "Активно" or "Неактивно"
+        local statusColor = speedhack.enabled and {0.2, 0.8, 0.2, menuAlpha} or {0.8, 0.2, 0.2, menuAlpha}
+        
+        imgui.SetCursorPos(menuX + sizes.padding, statusY)
+        imgui.TextColored(statusColor[1], statusColor[2], statusColor[3], statusColor[4], "Статус: " .. statusText)
     end
 end
 
@@ -142,34 +213,11 @@ end
 function onRender()
     animate(imgui.GetIO().DeltaTime)
     
-    -- Проверка клика по иконке
-    local mousePos = imgui.GetMousePos()
-    local iconRect = {
-        x = positions.icon.x,
-        y = positions.icon.y,
-        w = sizes.icon,
-        h = sizes.icon
-    }
-    
-    local isHovering = mousePos.x >= iconRect.x and mousePos.x <= iconRect.x + iconRect.w and
-                      mousePos.y >= iconRect.y and mousePos.y <= iconRect.y + iconRect.h
-    
-    -- Подсветка при наведении
-    if isHovering then
-        drawRoundedRect(iconRect.x - 2, iconRect.y - 2, iconRect.w + 4, iconRect.h + 4, 10, colors.hover)
-    end
-    
-    -- Отрисовка иконки
-    drawIcon()
+    -- Отрисовка заголовка
+    drawHeader()
     
     -- Отрисовка меню
     drawMenu()
-    
-    -- Обработка клика
-    if imgui.IsMouseClicked(0) and isHovering then
-        speedhack.menuOpen = not speedhack.menuOpen
-        speedhack.targetAnimationProgress = speedhack.menuOpen and 1.0 or 0.0
-    end
 end
 
 -- Функция установки скорости игры (замените на вашу реализацию)
@@ -178,5 +226,13 @@ function setGameSpeed(speed)
     print("Установлена скорость: " .. tostring(speed) .. "x")
 end
 
+-- Функция получения размера экрана (замените на вашу реализацию)
+function getScreenSize()
+    -- Замените на реальное получение размера экрана
+    return 1920, 1080
+end
+
 -- Инициализация
-print("🚗 SpeedHack загружен! Нажмите на иконку машинки чтобы открыть меню.")
+print("🚗 Mobile SpeedHack загружен!")
+print("Нажмите на заголовок чтобы перетащить меню")
+print("Нажмите на кнопку в правом углу чтобы открыть/закрыть меню")

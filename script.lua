@@ -1,4 +1,4 @@
--- SpeedHack UI для Roblox
+-- SpeedHack UI для Roblox с полем ввода
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -24,7 +24,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- Контейнер меню
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 40)
+MainFrame.Size = UDim2.new(0, 300, 0, 40)
 MainFrame.Position = speedhack.position
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BackgroundTransparency = 0.1
@@ -91,35 +91,91 @@ ButtonCorner.Parent = ToggleButton
 -- Контент меню
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, 0, 0, 140)
+Content.Size = UDim2.new(1, 0, 0, 160)
 Content.Position = UDim2.new(0, 0, 0, 40)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
--- Слайдер скорости
+-- Поле ввода скорости
+local InputContainer = Instance.new("Frame")
+InputContainer.Name = "InputContainer"
+InputContainer.Size = UDim2.new(1, -20, 0, 30)
+InputContainer.Position = UDim2.new(0, 10, 0, 10)
+InputContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+InputContainer.BorderSizePixel = 0
+InputContainer.Parent = Content
+
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = UDim.new(0, 6)
+InputCorner.Parent = InputContainer
+
+local SpeedInput = Instance.new("TextBox")
+SpeedInput.Name = "SpeedInput"
+SpeedInput.Size = UDim2.new(0.7, 0, 1, 0)
+SpeedInput.Position = UDim2.new(0, 0, 0, 0)
+SpeedInput.BackgroundTransparency = 1
+SpeedInput.Text = "1.0"
+SpeedInput.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedInput.Font = Enum.Font.Gotham
+SpeedInput.TextSize = 14
+SpeedInput.TextXAlignment = Enum.TextXAlignment.Left
+SpeedInput.PlaceholderText = "Введите скорость..."
+SpeedInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+SpeedInput.Parent = InputContainer
+
+local InputLabel = Instance.new("TextLabel")
+InputLabel.Name = "InputLabel"
+InputLabel.Size = UDim2.new(0.3, 0, 1, 0)
+InputLabel.Position = UDim2.new(0.7, 0, 0, 0)
+InputLabel.BackgroundTransparency = 1
+InputLabel.Text = "x скорость"
+InputLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+InputLabel.Font = Enum.Font.Gotham
+InputLabel.TextSize = 12
+InputLabel.TextXAlignment = Enum.TextXAlignment.Right
+InputLabel.Parent = InputContainer
+
+-- Кнопка применения ввода
+local ApplyButton = Instance.new("TextButton")
+ApplyButton.Name = "ApplyButton"
+ApplyButton.Size = UDim2.new(1, -20, 0, 30)
+ApplyButton.Position = UDim2.new(0, 10, 0, 50)
+ApplyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+ApplyButton.BorderSizePixel = 0
+ApplyButton.Text = "ПРИМЕНИТЬ СКОРОСТЬ"
+ApplyButton.TextColor3 = Color3.fromRGB(240, 240, 240)
+ApplyButton.Font = Enum.Font.GothamBold
+ApplyButton.TextSize = 12
+ApplyButton.Parent = Content
+
+local ApplyButtonCorner = Instance.new("UICorner")
+ApplyButtonCorner.CornerRadius = UDim.new(0, 6)
+ApplyButtonCorner.Parent = ApplyButton
+
+-- Слайдер скорости (дополнительная опция)
 local SpeedSlider = Instance.new("Frame")
 SpeedSlider.Name = "SpeedSlider"
-SpeedSlider.Size = UDim2.new(1, -20, 0, 50)
-SpeedSlider.Position = UDim2.new(0, 10, 0, 10)
+SpeedSlider.Size = UDim2.new(1, -20, 0, 30)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 90)
 SpeedSlider.BackgroundTransparency = 1
 SpeedSlider.Parent = Content
 
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Name = "SpeedLabel"
-SpeedLabel.Size = UDim2.new(1, 0, 0, 20)
-SpeedLabel.Position = UDim2.new(0, 0, 0, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "Скорость: 1.0x"
-SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.Font = Enum.Font.Gotham
-SpeedLabel.TextSize = 14
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = SpeedSlider
+local SliderLabel = Instance.new("TextLabel")
+SliderLabel.Name = "SliderLabel"
+SliderLabel.Size = UDim2.new(1, 0, 0, 15)
+SliderLabel.Position = UDim2.new(0, 0, 0, 0)
+SliderLabel.BackgroundTransparency = 1
+SliderLabel.Text = "Или используйте слайдер:"
+SliderLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+SliderLabel.Font = Enum.Font.Gotham
+SliderLabel.TextSize = 11
+SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+SliderLabel.Parent = SpeedSlider
 
 local SliderTrack = Instance.new("Frame")
 SliderTrack.Name = "SliderTrack"
 SliderTrack.Size = UDim2.new(1, 0, 0, 6)
-SliderTrack.Position = UDim2.new(0, 0, 0, 25)
+SliderTrack.Position = UDim2.new(0, 0, 0, 20)
 SliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SliderTrack.BorderSizePixel = 0
 SliderTrack.Parent = SpeedSlider
@@ -157,7 +213,7 @@ ThumbCorner.Parent = SliderThumb
 local ToggleSpeedButton = Instance.new("TextButton")
 ToggleSpeedButton.Name = "ToggleSpeedButton"
 ToggleSpeedButton.Size = UDim2.new(1, -20, 0, 35)
-ToggleSpeedButton.Position = UDim2.new(0, 10, 0, 70)
+ToggleSpeedButton.Position = UDim2.new(0, 10, 0, 130)
 ToggleSpeedButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 ToggleSpeedButton.BorderSizePixel = 0
 ToggleSpeedButton.Text = "ВКЛЮЧИТЬ"
@@ -174,7 +230,7 @@ ToggleButtonCorner.Parent = ToggleSpeedButton
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Name = "StatusLabel"
 StatusLabel.Size = UDim2.new(1, -20, 0, 20)
-StatusLabel.Position = UDim2.new(0, 10, 0, 115)
+StatusLabel.Position = UDim2.new(0, 10, 0, 175)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "Статус: Неактивно"
 StatusLabel.TextColor3 = Color3.fromRGB(200, 60, 60)
@@ -189,10 +245,13 @@ local dragInput, dragStart, startPos
 
 -- Функция обновления скорости
 local function updateSpeed(value)
-    speedhack.speed = math.clamp(value, 0.1, 10.0)
-    SpeedLabel.Text = string.format("Скорость: %.1fx", speedhack.speed)
+    speedhack.speed = math.clamp(value, 0.1, 50.0) -- Увеличил максимальную скорость до 50x
     
-    local fillWidth = (speedhack.speed - 0.1) / 9.9
+    -- Обновляем поле ввода
+    SpeedInput.Text = string.format("%.1f", speedhack.speed)
+    
+    -- Обновляем слайдер
+    local fillWidth = (speedhack.speed - 0.1) / 49.9
     SliderFill.Size = UDim2.new(fillWidth, 0, 1, 0)
     SliderThumb.Position = UDim2.new(fillWidth, -8, 0, -5)
     
@@ -213,7 +272,6 @@ local function setGameSpeed(speed)
         end
     end
     
-    -- Можно добавить другие эффекты скорости здесь
     print("Скорость установлена: " .. tostring(speed) .. "x")
 end
 
@@ -224,7 +282,7 @@ local function toggleSpeedhack()
     if speedhack.enabled then
         ToggleSpeedButton.Text = "ВЫКЛЮЧИТЬ"
         ToggleSpeedButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
-        StatusLabel.Text = "Статус: Активно"
+        StatusLabel.Text = "Статус: Активно (" .. string.format("%.1f", speedhack.speed) .. "x)"
         StatusLabel.TextColor3 = Color3.fromRGB(60, 200, 60)
         setGameSpeed(speedhack.speed)
     else
@@ -242,16 +300,55 @@ local function toggleMenu()
     
     if speedhack.menuOpen then
         ToggleButton.Text = "×"
-        MainFrame.Size = UDim2.new(0, 280, 0, 180)
+        MainFrame.Size = UDim2.new(0, 300, 0, 200)
     else
         ToggleButton.Text = "≡"
-        MainFrame.Size = UDim2.new(0, 280, 0, 40)
+        MainFrame.Size = UDim2.new(0, 300, 0, 40)
+    end
+end
+
+-- Функция применения скорости из поля ввода
+local function applySpeedFromInput()
+    local text = SpeedInput.Text
+    local number = tonumber(text)
+    
+    if number then
+        updateSpeed(number)
+        if speedhack.enabled then
+            StatusLabel.Text = "Статус: Активно (" .. string.format("%.1f", speedhack.speed) .. "x)"
+        end
+    else
+        -- Сбрасываем на текущее значение при неверном вводе
+        SpeedInput.Text = string.format("%.1f", speedhack.speed)
     end
 end
 
 -- Обработчики событий
 ToggleButton.MouseButton1Click:Connect(toggleMenu)
 ToggleSpeedButton.MouseButton1Click:Connect(toggleSpeedhack)
+ApplyButton.MouseButton1Click:Connect(applySpeedFromInput)
+
+-- Обработка ввода текста
+SpeedInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        applySpeedFromInput()
+    end
+end)
+
+-- Фильтрация ввода - только цифры и точка
+SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local text = SpeedInput.Text
+    local filtered = text:gsub("[^%d.]", "")
+    local dots = filtered:gsub("[^.]", "")
+    
+    if #dots > 1 then
+        filtered = filtered:gsub("%.", "", #dots - 1)
+    end
+    
+    if filtered ~= text then
+        SpeedInput.Text = filtered
+    end
+end)
 
 -- Обработка слайдера
 SliderThumb.MouseButton1Down:Connect(function()
@@ -267,7 +364,7 @@ SliderThumb.MouseButton1Down:Connect(function()
         local sliderAbsoluteSize = SliderTrack.AbsoluteSize
         
         local relativeX = math.clamp((mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X, 0, 1)
-        local speedValue = 0.1 + relativeX * 9.9
+        local speedValue = 0.1 + relativeX * 49.9
         
         updateSpeed(speedValue)
     end)
@@ -280,7 +377,7 @@ SliderTrack.MouseButton1Down:Connect(function()
     local sliderAbsoluteSize = SliderTrack.AbsoluteSize
     
     local relativeX = math.clamp((mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X, 0, 1)
-    local speedValue = 0.1 + relativeX * 9.9
+    local speedValue = 0.1 + relativeX * 49.9
     
     updateSpeed(speedValue)
 end)
@@ -328,6 +425,14 @@ ToggleButton.MouseLeave:Connect(function()
     TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)}):Play()
 end)
 
+ApplyButton.MouseEnter:Connect(function()
+    TweenService:Create(ApplyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 160, 255)}):Play()
+end)
+
+ApplyButton.MouseLeave:Connect(function()
+    TweenService:Create(ApplyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 120, 255)}):Play()
+end)
+
 ToggleSpeedButton.MouseEnter:Connect(function()
     local targetColor = speedhack.enabled and Color3.fromRGB(80, 220, 80) or Color3.fromRGB(220, 80, 80)
     TweenService:Create(ToggleSpeedButton, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
@@ -338,7 +443,16 @@ ToggleSpeedButton.MouseLeave:Connect(function()
     TweenService:Create(ToggleSpeedButton, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
 end)
 
+InputContainer.MouseEnter:Connect(function()
+    TweenService:Create(InputContainer, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+end)
+
+InputContainer.MouseLeave:Connect(function()
+    TweenService:Create(InputContainer, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+end)
+
 -- Инициализация
 print("🚗 SpeedHack для Roblox загружен!")
 print("Перетаскивайте за заголовок чтобы переместить меню")
 print("Нажмите ≡ чтобы открыть/закрыть меню")
+print("Вводите скорость в поле и нажимайте Применить или Enter")

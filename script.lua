@@ -1,238 +1,344 @@
--- SpeedHack Mobile UI
+-- SpeedHack UI для Roblox
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
 local speedhack = {
     enabled = false,
     speed = 1.0,
     menuOpen = false,
-    animationProgress = 0,
-    dragStartPos = {x = 0, y = 0},
-    isDragging = false,
-    position = {x = 20, y = 50}
+    position = UDim2.new(0, 20, 0, 50)
 }
 
--- Цвета темной темы
-local colors = {
-    background = {0.12, 0.12, 0.12, 0.95},
-    primary = {0.26, 0.26, 0.28, 1.0},
-    accent = {0.05, 0.55, 0.85, 1.0},
-    text = {0.95, 0.95, 0.95, 1.0},
-    border = {0.35, 0.35, 0.35, 1.0},
-    hover = {0.35, 0.35, 0.35, 0.3},
-    button = {0.2, 0.5, 0.8, 1.0},
-    buttonHover = {0.3, 0.6, 0.9, 1.0},
-    buttonActive = {0.15, 0.4, 0.7, 1.0}
-}
+-- Создаем основной интерфейс
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHackUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Размеры и позиции
-local sizes = {
-    headerHeight = 40,
-    menuWidth = 280,
-    menuHeight = 180,
-    padding = 15,
-    buttonHeight = 35,
-    sliderHeight = 20,
-    handleSize = 40,
-    dragThreshold = 5
-}
+-- Контейнер меню
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 40)
+MainFrame.Position = speedhack.position
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
 
--- Анимация
-local function animate(dt)
-    if speedhack.animationProgress < (speedhack.menuOpen and 1 or 0) then
-        speedhack.animationProgress = math.min(speedhack.animationProgress + dt * 8, 1)
-    elseif speedhack.animationProgress > (speedhack.menuOpen and 1 or 0) then
-        speedhack.animationProgress = math.max(speedhack.animationProgress - dt * 8, 0)
+-- Закругленные углы
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- Тень
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(20, 20, 20)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+-- Заголовок
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 40)
+Header.Position = UDim2.new(0, 0, 0, 0)
+Header.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Header.BackgroundTransparency = 0
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 8)
+HeaderCorner.Parent = Header
+
+-- Текст заголовка
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(0, 120, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "🚗 SpeedHack"
+Title.TextColor3 = Color3.fromRGB(240, 240, 240)
+Title.Font = Enum.Font.GothamMedium
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+-- Кнопка открытия/закрытия
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 30, 0, 30)
+ToggleButton.Position = UDim2.new(1, -40, 0, 5)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+ToggleButton.BackgroundTransparency = 0
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Text = "≡"
+ToggleButton.TextColor3 = Color3.fromRGB(240, 240, 240)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 16
+ToggleButton.Parent = Header
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = ToggleButton
+
+-- Контент меню
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.Size = UDim2.new(1, 0, 0, 140)
+Content.Position = UDim2.new(0, 0, 0, 40)
+Content.BackgroundTransparency = 1
+Content.Parent = MainFrame
+
+-- Слайдер скорости
+local SpeedSlider = Instance.new("Frame")
+SpeedSlider.Name = "SpeedSlider"
+SpeedSlider.Size = UDim2.new(1, -20, 0, 50)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 10)
+SpeedSlider.BackgroundTransparency = 1
+SpeedSlider.Parent = Content
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Size = UDim2.new(1, 0, 0, 20)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Скорость: 1.0x"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 14
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedSlider
+
+local SliderTrack = Instance.new("Frame")
+SliderTrack.Name = "SliderTrack"
+SliderTrack.Size = UDim2.new(1, 0, 0, 6)
+SliderTrack.Position = UDim2.new(0, 0, 0, 25)
+SliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SliderTrack.BorderSizePixel = 0
+SliderTrack.Parent = SpeedSlider
+
+local TrackCorner = Instance.new("UICorner")
+TrackCorner.CornerRadius = UDim.new(1, 0)
+TrackCorner.Parent = SliderTrack
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Name = "SliderFill"
+SliderFill.Size = UDim2.new(0.1, 0, 1, 0)
+SliderFill.Position = UDim2.new(0, 0, 0, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+SliderFill.BorderSizePixel = 0
+SliderFill.Parent = SliderTrack
+
+local FillCorner = Instance.new("UICorner")
+FillCorner.CornerRadius = UDim.new(1, 0)
+FillCorner.Parent = SliderFill
+
+local SliderThumb = Instance.new("TextButton")
+SliderThumb.Name = "SliderThumb"
+SliderThumb.Size = UDim2.new(0, 16, 0, 16)
+SliderThumb.Position = UDim2.new(0.1, -8, 0, -5)
+SliderThumb.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+SliderThumb.BorderSizePixel = 0
+SliderThumb.Text = ""
+SliderThumb.Parent = SpeedSlider
+
+local ThumbCorner = Instance.new("UICorner")
+ThumbCorner.CornerRadius = UDim.new(1, 0)
+ThumbCorner.Parent = SliderThumb
+
+-- Кнопка включения/выключения
+local ToggleSpeedButton = Instance.new("TextButton")
+ToggleSpeedButton.Name = "ToggleSpeedButton"
+ToggleSpeedButton.Size = UDim2.new(1, -20, 0, 35)
+ToggleSpeedButton.Position = UDim2.new(0, 10, 0, 70)
+ToggleSpeedButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+ToggleSpeedButton.BorderSizePixel = 0
+ToggleSpeedButton.Text = "ВКЛЮЧИТЬ"
+ToggleSpeedButton.TextColor3 = Color3.fromRGB(240, 240, 240)
+ToggleSpeedButton.Font = Enum.Font.GothamBold
+ToggleSpeedButton.TextSize = 14
+ToggleSpeedButton.Parent = Content
+
+local ToggleButtonCorner = Instance.new("UICorner")
+ToggleButtonCorner.CornerRadius = UDim.new(0, 6)
+ToggleButtonCorner.Parent = ToggleSpeedButton
+
+-- Статус
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Size = UDim2.new(1, -20, 0, 20)
+StatusLabel.Position = UDim2.new(0, 10, 0, 115)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Статус: Неактивно"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 60, 60)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextSize = 12
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = Content
+
+-- Переменные для перетаскивания
+local dragging = false
+local dragInput, dragStart, startPos
+
+-- Функция обновления скорости
+local function updateSpeed(value)
+    speedhack.speed = math.clamp(value, 0.1, 10.0)
+    SpeedLabel.Text = string.format("Скорость: %.1fx", speedhack.speed)
+    
+    local fillWidth = (speedhack.speed - 0.1) / 9.9
+    SliderFill.Size = UDim2.new(fillWidth, 0, 1, 0)
+    SliderThumb.Position = UDim2.new(fillWidth, -8, 0, -5)
+    
+    if speedhack.enabled then
+        setGameSpeed(speedhack.speed)
     end
 end
 
--- Отрисовка закругленного прямоугольника
-local function drawRoundedRect(x, y, w, h, radius, color)
-    local r, g, b, a = table.unpack(color)
-    imgui.DrawList_AddRectFilledRound(x, y, x + w, y + h, radius, 12, imgui.GetColorU32(r, g, b, a))
+-- Функция установки скорости игры
+local function setGameSpeed(speed)
+    -- Изменяем скорость персонажа
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16 * speed
+            humanoid.JumpPower = 50 * speed
+        end
+    end
+    
+    -- Можно добавить другие эффекты скорости здесь
+    print("Скорость установлена: " .. tostring(speed) .. "x")
 end
 
--- Отрисовка кнопки
-local function drawButton(x, y, w, h, text, isActive)
-    local mousePos = imgui.GetMousePos()
-    local isHovering = mousePos.x >= x and mousePos.x <= x + w and mousePos.y >= y and mousePos.y <= y + h
-    local isClicked = isHovering and imgui.IsMouseClicked(0)
+-- Функция переключения состояния
+local function toggleSpeedhack()
+    speedhack.enabled = not speedhack.enabled
     
-    local color = isActive and colors.buttonActive or (isHovering and colors.buttonHover or colors.button)
-    drawRoundedRect(x, y, w, h, 6, color)
-    
-    -- Текст кнопки
-    local textWidth = imgui.CalcTextSize(text)
-    imgui.DrawList_AddText(x + (w - textWidth) / 2, y + (h - imgui.GetFontSize()) / 2, 
-                          imgui.GetColorU32(1, 1, 1, 1), text)
-    
-    return isClicked
+    if speedhack.enabled then
+        ToggleSpeedButton.Text = "ВЫКЛЮЧИТЬ"
+        ToggleSpeedButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+        StatusLabel.Text = "Статус: Активно"
+        StatusLabel.TextColor3 = Color3.fromRGB(60, 200, 60)
+        setGameSpeed(speedhack.speed)
+    else
+        ToggleSpeedButton.Text = "ВКЛЮЧИТЬ"
+        ToggleSpeedButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        StatusLabel.Text = "Статус: Неактивно"
+        StatusLabel.TextColor3 = Color3.fromRGB(200, 60, 60)
+        setGameSpeed(1.0)
+    end
 end
 
--- Отрисовка заголовка с кнопкой закрытия
-local function drawHeader()
-    local headerX, headerY = speedhack.position.x, speedhack.position.y
-    local headerWidth = sizes.menuWidth
-    
-    -- Фон заголовка
-    drawRoundedRect(headerX, headerY, headerWidth, sizes.headerHeight, 8, colors.primary)
-    
-    -- Заголовок
-    local title = "🚗 SpeedHack"
-    local titleWidth = imgui.CalcTextSize(title)
-    imgui.DrawList_AddText(headerX + sizes.padding, headerY + (sizes.headerHeight - imgui.GetFontSize()) / 2, 
-                          imgui.GetColorU32(table.unpack(colors.text)), title)
-    
-    -- Кнопка закрытия/открытия
-    local buttonSize = sizes.headerHeight - 10
-    local buttonX = headerX + headerWidth - buttonSize - 5
-    local buttonY = headerY + 5
-    
-    local mousePos = imgui.GetMousePos()
-    local isHovering = mousePos.x >= buttonX and mousePos.x <= buttonX + buttonSize and 
-                      mousePos.y >= buttonY and mousePos.y <= buttonY + buttonSize
-    
-    -- Анимированный крестик/бургер
-    local centerX, centerY = buttonX + buttonSize/2, buttonY + buttonSize/2
-    local lineSize = buttonSize * 0.4
+-- Функция переключения меню
+local function toggleMenu()
+    speedhack.menuOpen = not speedhack.menuOpen
     
     if speedhack.menuOpen then
-        -- Крестик
-        imgui.DrawList_AddLine(
-            centerX - lineSize, centerY - lineSize,
-            centerX + lineSize, centerY + lineSize,
-            imgui.GetColorU32(1, 1, 1, 1), 2
-        )
-        imgui.DrawList_AddLine(
-            centerX + lineSize, centerY - lineSize,
-            centerX - lineSize, centerY + lineSize,
-            imgui.GetColorU32(1, 1, 1, 1), 2
-        )
+        ToggleButton.Text = "×"
+        MainFrame.Size = UDim2.new(0, 280, 0, 180)
     else
-        -- Бургер меню
-        local lineY1 = centerY - lineSize/2
-        local lineY2 = centerY
-        local lineY3 = centerY + lineSize/2
-        
-        imgui.DrawList_AddLine(
-            centerX - lineSize, lineY1,
-            centerX + lineSize, lineY1,
-            imgui.GetColorU32(1, 1, 1, 1), 2
-        )
-        imgui.DrawList_AddLine(
-            centerX - lineSize, lineY2,
-            centerX + lineSize, lineY2,
-            imgui.GetColorU32(1, 1, 1, 1), 2
-        )
-        imgui.DrawList_AddLine(
-            centerX - lineSize, lineY3,
-            centerX + lineSize, lineY3,
-            imgui.GetColorU32(1, 1, 1, 1), 2
-        )
+        ToggleButton.Text = "≡"
+        MainFrame.Size = UDim2.new(0, 280, 0, 40)
     end
-    
-    -- Обработка клика по кнопке
-    if isHovering and imgui.IsMouseClicked(0) then
-        speedhack.menuOpen = not speedhack.menuOpen
-        return true
-    end
-    
-    -- Проверка на начало перетаскивания
-    local isInHeader = mousePos.x >= headerX and mousePos.x <= headerX + headerWidth and 
-                      mousePos.y >= headerY and mousePos.y <= headerY + sizes.headerHeight
-    
-    if isInHeader and imgui.IsMouseClicked(0) then
-        speedhack.dragStartPos = {x = mousePos.x - speedhack.position.x, y = mousePos.y - speedhack.position.y}
-        speedhack.isDragging = true
-    end
-    
-    if imgui.IsMouseDown(0) and speedhack.isDragging then
-        speedhack.position.x = mousePos.x - speedhack.dragStartPos.x
-        speedhack.position.y = mousePos.y - speedhack.dragStartPos.y
-        
-        -- Ограничение позиции в пределах экрана
-        local screenWidth, screenHeight = getScreenSize()
-        speedhack.position.x = math.max(0, math.min(screenWidth - sizes.menuWidth, speedhack.position.x))
-        speedhack.position.y = math.max(0, math.min(screenHeight - sizes.menuHeight, speedhack.position.y))
-    else
-        speedhack.isDragging = false
-    end
-    
-    return false
 end
 
--- Отрисовка меню
-local function drawMenu()
-    if speedhack.menuOpen or speedhack.animationProgress > 0 then
-        local menuAlpha = speedhack.animationProgress
-        local menuX, menuY = speedhack.position.x, speedhack.position.y + sizes.headerHeight
-        
-        -- Фон меню с анимацией
-        local currentColors = {
-            background = {colors.background[1], colors.background[2], colors.background[3], colors.background[4] * menuAlpha},
-            text = {colors.text[1], colors.text[2], colors.text[3], colors.text[4] * menuAlpha}
-        }
-        
-        drawRoundedRect(menuX, menuY, sizes.menuWidth, sizes.menuHeight, 8, currentColors.background)
-        
-        -- Содержимое меню
-        local contentY = menuY + sizes.padding
-        
-        -- Слайдер скорости
-        imgui.SetCursorPos(menuX + sizes.padding, contentY)
-        imgui.TextColored(table.unpack(currentColors.text), "Скорость: %.1fx", speedhack.speed)
-        
-        imgui.SetCursorPos(menuX + sizes.padding, contentY + imgui.GetFontSize() + 5)
-        if imgui.SliderFloat("##speed", speedhack.speed, 0.1, 10.0, "%.1f", sizes.menuWidth - sizes.padding * 2) then
-            if speedhack.enabled then
-                setGameSpeed(speedhack.speed)
-            end
+-- Обработчики событий
+ToggleButton.MouseButton1Click:Connect(toggleMenu)
+ToggleSpeedButton.MouseButton1Click:Connect(toggleSpeedhack)
+
+-- Обработка слайдера
+SliderThumb.MouseButton1Down:Connect(function()
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            connection:Disconnect()
+            return
         end
         
-        -- Кнопка включения/выключения
-        local buttonY = contentY + imgui.GetFontSize() * 2 + sizes.sliderHeight + 15
-        local buttonText = speedhack.enabled and "ВЫКЛЮЧИТЬ" or "ВКЛЮЧИТЬ"
+        local mousePos = UserInputService:GetMouseLocation()
+        local sliderAbsolutePos = SliderTrack.AbsolutePosition
+        local sliderAbsoluteSize = SliderTrack.AbsoluteSize
         
-        if drawButton(menuX + sizes.padding, buttonY, sizes.menuWidth - sizes.padding * 2, sizes.buttonHeight, buttonText, speedhack.enabled) then
-            speedhack.enabled = not speedhack.enabled
-            if speedhack.enabled then
-                setGameSpeed(speedhack.speed)
-            else
-                setGameSpeed(1.0)
-            end
-        end
+        local relativeX = math.clamp((mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X, 0, 1)
+        local speedValue = 0.1 + relativeX * 9.9
         
-        -- Информация о состоянии
-        local statusY = buttonY + sizes.buttonHeight + 10
-        local statusText = speedhack.enabled and "Активно" or "Неактивно"
-        local statusColor = speedhack.enabled and {0.2, 0.8, 0.2, menuAlpha} or {0.8, 0.2, 0.2, menuAlpha}
-        
-        imgui.SetCursorPos(menuX + sizes.padding, statusY)
-        imgui.TextColored(statusColor[1], statusColor[2], statusColor[3], statusColor[4], "Статус: " .. statusText)
+        updateSpeed(speedValue)
+    end)
+end)
+
+-- Обработка клика по треку слайдера
+SliderTrack.MouseButton1Down:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+    local sliderAbsolutePos = SliderTrack.AbsolutePosition
+    local sliderAbsoluteSize = SliderTrack.AbsoluteSize
+    
+    local relativeX = math.clamp((mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X, 0, 1)
+    local speedValue = 0.1 + relativeX * 9.9
+    
+    updateSpeed(speedValue)
+end)
+
+-- Функции для перетаскивания окна
+local function updateInput(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end
 
--- Основная функция рендеринга
-function onRender()
-    animate(imgui.GetIO().DeltaTime)
-    
-    -- Отрисовка заголовка
-    drawHeader()
-    
-    -- Отрисовка меню
-    drawMenu()
-end
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
 
--- Функция установки скорости игры (замените на вашу реализацию)
-function setGameSpeed(speed)
-    -- Ваша реализация изменения скорости игры здесь
-    print("Установлена скорость: " .. tostring(speed) .. "x")
-end
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
 
--- Функция получения размера экрана (замените на вашу реализацию)
-function getScreenSize()
-    -- Замените на реальное получение размера экрана
-    return 1920, 1080
-end
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateInput(input)
+    end
+end)
+
+-- Эффекты при наведении
+ToggleButton.MouseEnter:Connect(function()
+    TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 90, 90)}):Play()
+end)
+
+ToggleButton.MouseLeave:Connect(function()
+    TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)}):Play()
+end)
+
+ToggleSpeedButton.MouseEnter:Connect(function()
+    local targetColor = speedhack.enabled and Color3.fromRGB(80, 220, 80) or Color3.fromRGB(220, 80, 80)
+    TweenService:Create(ToggleSpeedButton, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+end)
+
+ToggleSpeedButton.MouseLeave:Connect(function()
+    local targetColor = speedhack.enabled and Color3.fromRGB(60, 200, 60) or Color3.fromRGB(200, 60, 60)
+    TweenService:Create(ToggleSpeedButton, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+end)
 
 -- Инициализация
-print("🚗 Mobile SpeedHack загружен!")
-print("Нажмите на заголовок чтобы перетащить меню")
-print("Нажмите на кнопку в правом углу чтобы открыть/закрыть меню")
+print("🚗 SpeedHack для Roblox загружен!")
+print("Перетаскивайте за заголовок чтобы переместить меню")
+print("Нажмите ≡ чтобы открыть/закрыть меню")

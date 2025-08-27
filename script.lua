@@ -5,53 +5,63 @@ local targetAnimationProgress = 0
 local currentSpeed = 1.0
 local defaultSpeed = 1.0
 
--- Создаем иконку меню
-local menuIcon = createSprite("speed_icon.png")
-menuIcon.color = Color(70, 130, 180, 200)  -- SteelBlue с прозрачностью
-menuIcon.size = Vector2(50, 50)
-menuIcon.position = Vector2(50, 50)
+-- Цветовая схема
+local colors = {
+    background = Color(20, 20, 25, 240),
+    surface = Color(35, 35, 40, 255),
+    primary = Color(50, 50, 55, 255),
+    accent = Color(65, 65, 75, 255),
+    text = Color(220, 220, 220, 255),
+    hint = Color(150, 150, 150, 255),
+    success = Color(80, 200, 120, 255),
+    error = Color(200, 80, 80, 255)
+}
+
+-- Иконка меню (символ вместо спрайта)
+local menuIcon = {
+    position = Vector2(30, 30),
+    size = Vector2(60, 60),
+    color = colors.accent,
+    hoverColor = Color(85, 85, 95, 255),
+    isHovered = false
+}
 
 -- Основное меню
 local mainMenu = {
     visible = false,
-    position = Vector2(100, 100),
-    size = Vector2(250, 300),
-    color = Color(30, 30, 35, 230),
-    cornerRadius = 15
+    position = Vector2(80, 80),
+    size = Vector2(280, 380),
+    cornerRadius = 20
 }
 
 -- Элементы меню
 local speedInput = {
     text = "1.0",
-    position = Vector2(125, 150),
-    size = Vector2(200, 40),
-    color = Color(45, 45, 50, 255),
+    position = Vector2(100, 180),
+    size = Vector2(240, 50),
     active = false,
-    placeholder = "Скорость"
+    placeholder = "Введите скорость"
 }
 
 local setSpeedButton = {
-    text = "Установить скорость",
-    position = Vector2(125, 200),
-    size = Vector2(200, 45),
-    color = Color(65, 105, 225, 255),  -- RoyalBlue
-    hoverColor = Color(75, 115, 235, 255)
+    text = "УСТАНОВИТЬ СКОРОСТЬ",
+    position = Vector2(100, 250),
+    size = Vector2(240, 55),
+    isHovered = false
 }
 
 local resetSpeedButton = {
-    text = "Обычная скорость",
-    position = Vector2(125, 255),
-    size = Vector2(200, 45),
-    color = Color(90, 90, 100, 255),
-    hoverColor = Color(110, 110, 120, 255)
+    text = "ОБЫЧНАЯ СКОРОСТЬ",
+    position = Vector2(100, 320),
+    size = Vector2(240, 55),
+    isHovered = false
 }
 
 local closeButton = {
     text = "✕",
-    position = Vector2(330, 110),
-    size = Vector2(30, 30),
-    color = Color(200, 60, 60, 255),
-    hoverColor = Color(220, 80, 80, 255)
+    position = Vector2(330, 90),
+    size = Vector2(40, 40),
+    isHovered = false
 }
 
 -- Функция для проверки касания
@@ -74,10 +84,55 @@ function setPlayerSpeed(speed)
     end
 end
 
+-- Функция рисования закругленного прямоугольника
+function drawRoundedRect(position, size, radius, color)
+    -- Простая реализация прямоугольника с закругленными углами
+    drawRect(position, size, color, radius)
+end
+
+-- Функция рисования иконки
+function drawMenuIcon()
+    local iconColor = menuIcon.isHovered and menuIcon.hoverColor or menuIcon.color
+    local alpha = 255 * animationProgress
+    
+    -- Фон иконки
+    drawRoundedRect(menuIcon.position, menuIcon.size, 15, Color(iconColor.r, iconColor.g, iconColor.b, alpha))
+    
+    -- Символ скорости (три линии)
+    local center = Vector2(menuIcon.position.x + menuIcon.size.x/2, menuIcon.position.y + menuIcon.size.y/2)
+    local iconAlpha = isMenuOpen and alpha or 255
+    
+    -- Горизонтальные линии
+    drawLine(
+        Vector2(center.x - 15, center.y - 8),
+        Vector2(center.x + 15, center.y - 8),
+        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
+        3
+    )
+    drawLine(
+        Vector2(center.x - 12, center.y),
+        Vector2(center.x + 12, center.y),
+        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
+        3
+    )
+    drawLine(
+        Vector2(center.x - 9, center.y + 8),
+        Vector2(center.x + 9, center.y + 8),
+        Color(colors.text.r, colors.text.g, colors.text.b, iconAlpha),
+        3
+    )
+end
+
 -- Основная функция обновления
 function update()
     -- Обновление анимации
-    animationProgress = lerp(animationProgress, targetAnimationProgress, 0.2)
+    animationProgress = lerp(animationProgress, targetAnimationProgress, 0.15)
+    
+    -- Сброс состояний наведения
+    menuIcon.isHovered = false
+    setSpeedButton.isHovered = false
+    resetSpeedButton.isHovered = false
+    closeButton.isHovered = false
     
     -- Обработка касаний
     local touches = getTouches()
@@ -110,7 +165,7 @@ function update()
                 -- Кнопка установки скорости
                 if isTouchInRect(touch.position, setSpeedButton.position, setSpeedButton.size) then
                     local speed = tonumber(speedInput.text)
-                    if speed and speed > 0 then
+                    if speed and speed > 0 and speed <= 10 then
                         setPlayerSpeed(speed)
                         playSound("confirm.wav")
                     else
@@ -126,9 +181,28 @@ function update()
                 end
             end
         end
+        
+        -- Проверка наведения для анимаций
+        if touch.phase == "MOVED" then
+            if isTouchInRect(touch.position, menuIcon.position, menuIcon.size) then
+                menuIcon.isHovered = true
+            end
+            
+            if isMenuOpen then
+                if isTouchInRect(touch.position, setSpeedButton.position, setSpeedButton.size) then
+                    setSpeedButton.isHovered = true
+                end
+                if isTouchInRect(touch.position, resetSpeedButton.position, resetSpeedButton.size) then
+                    resetSpeedButton.isHovered = true
+                end
+                if isTouchInRect(touch.position, closeButton.position, closeButton.size) then
+                    closeButton.isHovered = true
+                end
+            end
+        end
     end
     
-    -- Обновление позиции меню с анимацией
+    -- Обновление видимости меню
     if isMenuOpen then
         mainMenu.visible = true
     else
@@ -140,47 +214,84 @@ end
 
 -- Функция отрисовки
 function render()
-    -- Рисуем иконку меню
-    drawSprite(menuIcon)
+    -- Рисуем иконку меню (всегда видима)
+    drawMenuIcon()
     
     -- Если меню видимо, рисуем его с анимацией
     if mainMenu.visible then
         local scale = animationProgress
         local alpha = 255 * animationProgress
         
-        -- Фон меню
+        -- Фон меню с тенью
+        drawRoundedRect(
+            Vector2(mainMenu.position.x - 2, mainMenu.position.y - 2),
+            Vector2(mainMenu.size.x + 4, mainMenu.size.y + 4),
+            mainMenu.cornerRadius,
+            Color(0, 0, 0, alpha * 0.3)
+        )
+        
         drawRoundedRect(
             mainMenu.position, 
             mainMenu.size, 
             mainMenu.cornerRadius, 
-            Color(mainMenu.color.r, mainMenu.color.g, mainMenu.color.b, alpha)
+            Color(colors.background.r, colors.background.g, colors.background.b, alpha)
         )
         
         -- Заголовок
-        drawText("Управление скоростью", Vector2(125, 120), Color(255, 255, 255, alpha), 18, "center")
+        drawText("УПРАВЛЕНИЕ СКОРОСТЬЮ", 
+                Vector2(mainMenu.position.x + mainMenu.size.x/2, mainMenu.position.y + 40), 
+                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
+                20, "center", "bold")
         
         -- Поле ввода
-        local inputColor = speedInput.active and Color(60, 60, 70, alpha) or Color(speedInput.color.r, speedInput.color.g, speedInput.color.b, alpha)
-        drawRoundedRect(speedInput.position, speedInput.size, 8, inputColor)
-        drawText(speedInput.text, Vector2(speedInput.position.x + 10, speedInput.position.y + 10), Color(255, 255, 255, alpha), 16)
+        local inputColor = speedInput.active and colors.primary or colors.surface
+        drawRoundedRect(speedInput.position, speedInput.size, 12, 
+                       Color(inputColor.r, inputColor.g, inputColor.b, alpha))
         
-        if speedInput.text == "" and not speedInput.active then
-            drawText(speedInput.placeholder, Vector2(speedInput.position.x + 10, speedInput.position.y + 10), Color(150, 150, 150, alpha), 16)
+        -- Текст в поле ввода
+        if speedInput.text ~= "" then
+            drawText(speedInput.text, 
+                    Vector2(speedInput.position.x + 15, speedInput.position.y + 15), 
+                    Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
+                    18)
+        else
+            drawText(speedInput.placeholder, 
+                    Vector2(speedInput.position.x + 15, speedInput.position.y + 15), 
+                    Color(colors.hint.r, colors.hint.g, colors.hint.b, alpha), 
+                    18)
         end
         
-        -- Кнопки
-        drawRoundedRect(setSpeedButton.position, setSpeedButton.size, 10, Color(setSpeedButton.color.r, setSpeedButton.color.g, setSpeedButton.color.b, alpha))
-        drawText(setSpeedButton.text, Vector2(setSpeedButton.position.x + setSpeedButton.size.x/2, setSpeedButton.position.y + setSpeedButton.size.y/2 - 8), Color(255, 255, 255, alpha), 16, "center")
+        -- Кнопка установки скорости
+        local setButtonColor = setSpeedButton.isHovered and colors.accent or colors.primary
+        drawRoundedRect(setSpeedButton.position, setSpeedButton.size, 12, 
+                       Color(setButtonColor.r, setButtonColor.g, setButtonColor.b, alpha))
+        drawText(setSpeedButton.text, 
+                Vector2(setSpeedButton.position.x + setSpeedButton.size.x/2, setSpeedButton.position.y + setSpeedButton.size.y/2 - 10), 
+                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
+                16, "center", "bold")
         
-        drawRoundedRect(resetSpeedButton.position, resetSpeedButton.size, 10, Color(resetSpeedButton.color.r, resetSpeedButton.color.g, resetSpeedButton.color.b, alpha))
-        drawText(resetSpeedButton.text, Vector2(resetSpeedButton.position.x + resetSpeedButton.size.x/2, resetSpeedButton.position.y + resetSpeedButton.size.y/2 - 8), Color(255, 255, 255, alpha), 16, "center")
+        -- Кнопка сброса скорости
+        local resetButtonColor = resetSpeedButton.isHovered and colors.accent or colors.primary
+        drawRoundedRect(resetSpeedButton.position, resetSpeedButton.size, 12, 
+                       Color(resetButtonColor.r, resetButtonColor.g, resetButtonColor.b, alpha))
+        drawText(resetSpeedButton.text, 
+                Vector2(resetSpeedButton.position.x + resetSpeedButton.size.x/2, resetSpeedButton.position.y + resetSpeedButton.size.y/2 - 10), 
+                Color(colors.text.r, colors.text.g, colors.text.b, alpha), 
+                16, "center", "bold")
         
         -- Кнопка закрытия
-        drawRoundedRect(closeButton.position, closeButton.size, 15, Color(closeButton.color.r, closeButton.color.g, closeButton.color.b, alpha))
-        drawText(closeButton.text, Vector2(closeButton.position.x + closeButton.size.x/2, closeButton.position.y + closeButton.size.y/2 - 8), Color(255, 255, 255, alpha), 18, "center")
+        local closeButtonColor = closeButton.isHovered and Color(220, 90, 90, alpha) or Color(200, 70, 70, alpha)
+        drawRoundedRect(closeButton.position, closeButton.size, 20, closeButtonColor)
+        drawText(closeButton.text, 
+                Vector2(closeButton.position.x + closeButton.size.x/2, closeButton.position.y + closeButton.size.y/2 - 12), 
+                Color(255, 255, 255, alpha), 
+                20, "center", "bold")
         
         -- Текущая скорость
-        drawText("Текущая: " .. currentSpeed .. "x", Vector2(125, 310), Color(200, 200, 200, alpha), 14, "center")
+        drawText("Текущая скорость: " .. currentSpeed .. "x", 
+                Vector2(mainMenu.position.x + mainMenu.size.x/2, mainMenu.position.y + mainMenu.size.y - 30), 
+                Color(colors.hint.r, colors.hint.g, colors.hint.b, alpha), 
+                14, "center")
     end
 end
 
@@ -191,20 +302,22 @@ function onTextInput(text)
             -- Backspace
             speedInput.text = speedInput.text:sub(1, -2)
         elseif text:match("[%d%.]") and #speedInput.text < 6 then
-            -- Только цифры и точка
-            speedInput.text = speedInput.text .. text
+            -- Только цифры и точка, максимум 6 символов
+            if not (text == "." and speedInput.text:find("%.")) then -- Проверка на дублирование точки
+                speedInput.text = speedInput.text .. text
+            end
         end
     end
 end
 
 -- Инициализация
 function init()
-    print("Скрипт управления скоростью загружен!")
-    print("Нажмите на иконку в левом верхнем углу для открытия меню")
+    print("🚀 Скрипт управления скоростью загружен!")
+    print("👉 Нажмите на иконку в левом верхнем углу для открытия меню")
 end
 
 -- Очистка
 function cleanup()
     setPlayerSpeed(defaultSpeed)
-    print("Скрипт управления скоростью выгружен")
+    print("📴 Скрипт управления скоростью выгружен")
 end

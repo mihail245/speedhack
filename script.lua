@@ -6,7 +6,6 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 
 local speedhack = {
     enabled = false,
@@ -34,11 +33,6 @@ local function createModernWindow(title, initialSize, initialPosition)
     frame.BorderSizePixel = 0
     frame.ClipsDescendants = true
     frame.Parent = ScreenGui
-    
-    -- Размытие фона (если поддерживается)
-    local blurEffect = Instance.new("BlurEffect")
-    blurEffect.Size = 0
-    blurEffect.Parent = frame
     
     -- Тень окна
     local shadow = Instance.new("Frame")
@@ -76,11 +70,6 @@ local function createModernWindow(title, initialSize, initialPosition)
     local headerCorner = Instance.new("UICorner")
     headerCorner.CornerRadius = UDim.new(0, 12)
     headerCorner.Parent = header
-    
-    -- Отдельный корнер для нижней части заголовка
-    local headerBottomCorner = Instance.new("UICorner")
-    headerBottomCorner.CornerRadius = UDim.new(0, 0)
-    headerBottomCorner.Parent = header
     
     -- Иконка окна
     local icon = Instance.new("TextLabel")
@@ -163,7 +152,6 @@ local function createModernWindow(title, initialSize, initialPosition)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = scrollingFrame
     
-    -- Добавление элементов интерфейса
     -- Поле ввода скорости
     local inputCard = Instance.new("Frame")
     inputCard.Size = UDim2.new(1, -24, 0, 70)
@@ -357,15 +345,20 @@ local function createModernWindow(title, initialSize, initialPosition)
     statusText.Parent = statusCard
     
     -- Обновление CanvasSize
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    local function updateCanvasSize()
+        wait(0.1)
         scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 20)
-    end)
+    end
+    
+    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
+    task.wait(0.1)
+    updateCanvasSize()
     
     -- Функции управления окном
     local isMinimized = false
     local isMaximized = false
-    var savedSize = initialSize
-    var savedPosition = initialPosition
+    local savedSize = initialSize
+    local savedPosition = initialPosition
     
     window.toggleMinimize = function()
         isMinimized = not isMinimized
@@ -375,7 +368,7 @@ local function createModernWindow(title, initialSize, initialPosition)
             minimizeBtn.Text = "□"
         else
             content.Visible = true
-            frame.Size = initialSize
+            frame.Size = savedSize
             minimizeBtn.Text = "─"
         end
     end
@@ -402,7 +395,9 @@ local function createModernWindow(title, initialSize, initialPosition)
     
     -- Перетаскивание окна
     local dragging = false
-    local dragInput, dragStart, startPos
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
     
     local function updateInput(input)
         if dragging then
@@ -443,6 +438,17 @@ local function createModernWindow(title, initialSize, initialPosition)
     closeBtn.MouseButton1Click:Connect(window.close)
     
     -- Функции SpeedHack
+    local function setGameSpeed(speed)
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16 * speed
+                humanoid.JumpPower = 50 * speed
+            end
+        end
+    end
+    
     local function updateSpeed(value)
         speedhack.speed = math.clamp(value, 0.1, 50.0)
         inputBox.Text = string.format("%.1f", speedhack.speed)
@@ -455,17 +461,6 @@ local function createModernWindow(title, initialSize, initialPosition)
         if speedhack.enabled then
             setGameSpeed(speedhack.speed)
             statusText.Text = string.format("🟢 Статус: Активно (%.1fx)", speedhack.speed)
-        end
-    end
-    
-    local function setGameSpeed(speed)
-        local character = player.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 16 * speed
-                humanoid.JumpPower = 50 * speed
-            end
         end
     end
     
@@ -518,6 +513,7 @@ local function createModernWindow(title, initialSize, initialPosition)
     
     -- Слайдер
     local sliderDragging = false
+    
     sliderThumb.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             sliderDragging = true
@@ -534,9 +530,11 @@ local function createModernWindow(title, initialSize, initialPosition)
             local trackPos = sliderTrack.AbsolutePosition
             local trackSize = sliderTrack.AbsoluteSize
             
-            local relativeX = math.clamp((mousePos.X - trackPos.X) / trackSize.X, 0, 1)
-            local speedValue = 0.1 + relativeX * 49.9
-            updateSpeed(speedValue)
+            if trackSize.X > 0 then
+                local relativeX = math.clamp((mousePos.X - trackPos.X) / trackSize.X, 0, 1)
+                local speedValue = 0.1 + relativeX * 49.9
+                updateSpeed(speedValue)
+            end
         end
     end
     
@@ -547,9 +545,11 @@ local function createModernWindow(title, initialSize, initialPosition)
         local trackPos = sliderTrack.AbsolutePosition
         local trackSize = sliderTrack.AbsoluteSize
         
-        local relativeX = math.clamp((mousePos.X - trackPos.X) / trackSize.X, 0, 1)
-        local speedValue = 0.1 + relativeX * 49.9
-        updateSpeed(speedValue)
+        if trackSize.X > 0 then
+            local relativeX = math.clamp((mousePos.X - trackPos.X) / trackSize.X, 0, 1)
+            local speedValue = 0.1 + relativeX * 49.9
+            updateSpeed(speedValue)
+        end
     end)
     
     -- Эффекты наведения

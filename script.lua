@@ -1,5 +1,5 @@
 -- SpeedHack GUI with WalkSpeed ONLY + Close button
--- Works on any Roblox executor
+-- Works on any Roblox executor (PC + Mobile)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -26,10 +26,11 @@ local speedhack = {
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SpeedHackGUI"
 screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 40)
+MainFrame.Size = UDim2.new(0, 300, 0, 200) -- Сразу полный размер
 MainFrame.Position = speedhack.position
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
@@ -56,7 +57,7 @@ TitleBar.Parent = MainFrame
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Name = "TitleText"
-TitleText.Size = UDim2.new(1, -90, 1, 0)  -- отступ под две кнопки
+TitleText.Size = UDim2.new(1, -90, 1, 0)
 TitleText.Position = UDim2.new(0, 10, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "⚡ SPEED HACK"
@@ -276,7 +277,6 @@ local function setGameSpeed(multiplier)
     if char and char:FindFirstChild("Humanoid") then
         local hum = char.Humanoid
         hum.WalkSpeed = originalWalkSpeed * multiplier
-        -- JumpPower remains unchanged (originalJumpPower)
     end
 end
 
@@ -288,8 +288,6 @@ local function updateSpeed(newSpeed)
     
     -- Update slider position
     local percent = (newSpeed - 0.1) / (50 - 0.1)
-    local sliderWidth = SliderBg.AbsoluteSize.X
-    local fillWidth = sliderWidth * percent
     SliderFill.Size = UDim2.new(percent, 0, 1, 0)
     SliderKnob.Position = UDim2.new(percent, -8, 0, -6)
     
@@ -336,83 +334,122 @@ ToggleBtn.MouseButton1Click:Connect(toggleSpeedhack)
 
 -- Slider dragging
 local draggingSlider = false
-local function updateSliderFromMouse(input)
+local function updateSliderFromInput(input)
     if not draggingSlider then return end
     local mousePos = input.Position.X
     local sliderAbsPos = SliderBg.AbsolutePosition.X
     local sliderWidth = SliderBg.AbsoluteSize.X
-    local percent = math.clamp((mousePos - sliderAbsPos) / sliderWidth, 0, 1)
-    local newSpeed = 0.1 + percent * (50 - 0.1)
-    updateSpeed(newSpeed)
+    if sliderWidth > 0 then
+        local percent = math.clamp((mousePos - sliderAbsPos) / sliderWidth, 0, 1)
+        local newSpeed = 0.1 + percent * (50 - 0.1)
+        updateSpeed(newSpeed)
+    end
 end
 
-SliderKnob.MouseButton1Down:Connect(function()
-    draggingSlider = true
+SliderKnob.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingSlider = true
+    end
+end)
+
+SliderBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local mousePos = input.Position.X
+        local sliderAbsPos = SliderBg.AbsolutePosition.X
+        local sliderWidth = SliderBg.AbsoluteSize.X
+        if sliderWidth > 0 then
+            local percent = math.clamp((mousePos - sliderAbsPos) / sliderWidth, 0, 1)
+            local newSpeed = 0.1 + percent * (50 - 0.1)
+            updateSpeed(newSpeed)
+            draggingSlider = true
+        end
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingSlider = false
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        updateSliderFromMouse(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and draggingSlider then
+        updateSliderFromInput(input)
     end
 end)
 
--- Click on slider background
-SliderBg.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local mousePos = input.Position.X
-        local sliderAbsPos = SliderBg.AbsolutePosition.X
-        local sliderWidth = SliderBg.AbsoluteSize.X
-        local percent = math.clamp((mousePos - sliderAbsPos) / sliderWidth, 0, 1)
-        local newSpeed = 0.1 + percent * (50 - 0.1)
-        updateSpeed(newSpeed)
-        draggingSlider = true
-    end
-end)
-
--- Menu toggle (collapse/expand)
+-- Menu toggle (collapse/expand) - ИСПРАВЛЕНО
 local menuCollapsed = false
+local isAnimating = false
+
 ToggleMenuBtn.MouseButton1Click:Connect(function()
+    if isAnimating then return end
+    isAnimating = true
+    
     menuCollapsed = not menuCollapsed
     local targetHeight = menuCollapsed and 40 or 200
-    local targetText = menuCollapsed and "×" or "≡"
+    local targetText = menuCollapsed and "▶" or "≡"  -- Меняем иконку для наглядности
     ToggleMenuBtn.Text = targetText
+    
     local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 300, 0, targetHeight)})
     tween:Play()
     ContentPanel.Visible = not menuCollapsed
+    
+    tween.Completed:Connect(function()
+        isAnimating = false
+    end)
 end)
 
--- Dragging window
+-- Dragging window - С БЛОКИРОВКОЙ КАМЕРЫ
 local dragging = false
 local dragStart
 local frameStart
+local dragConnection = nil
+local endConnection = nil
 
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+local function startDrag(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         frameStart = MainFrame.Position
+        
+        -- Блокируем камеру и движение персонажа во время перетаскивания
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.CameraType = Enum.CameraType.Scriptable
+        end
+        
+        -- Отключаем стандартное управление камерой
+        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
     end
-end)
+end
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+local function updateDrag(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(frameStart.X.Scale, frameStart.X.Offset + delta.X, frameStart.Y.Scale, frameStart.Y.Offset + delta.Y)
         speedhack.position = MainFrame.Position
     end
-end)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+local function endDrag(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
+        
+        -- Возвращаем управление камерой
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.CameraType = Enum.CameraType.Custom
+        end
+        
+        -- Возвращаем нормальное поведение мыши
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
     end
-end)
+end
+
+TitleBar.InputBegan:Connect(startDrag)
+dragConnection = UserInputService.InputChanged:Connect(updateDrag)
+endConnection = UserInputService.InputEnded:Connect(endDrag)
 
 -- Character respawn handling
 player.CharacterAdded:Connect(function(newChar)
@@ -427,3 +464,21 @@ end)
 
 -- Initialize
 updateSpeed(1.0)
+
+-- Фикс для мобильных устройств - отключаем скролл камеры при касании GUI
+local function blockCameraOnGuiTouch(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        local guiObjects = screenGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
+        if #guiObjects > 0 then
+            return true
+        end
+    end
+    return false
+end
+
+UserInputService.TouchStarted:Connect(function(input)
+    if blockCameraOnGuiTouch(input) then
+        -- Предотвращаем движение камеры
+        return
+    end
+end)
